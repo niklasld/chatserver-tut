@@ -1,25 +1,21 @@
-import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
-
+import java.util.ArrayList;
 
 public class ServerMain {
+    public static ArrayList<ServerWorker> workerList;
+
     public static void main(String[] args) {
         int port = 1337;
-        try {
-            ServerSocket ss = new ServerSocket(port);
-            while (true) {
-                System.out.println("About to accept connection...");
-                Socket clientSocket = ss.accept();
-                System.out.println("Accepted connection from port " + port);
-                ServerWorker serverWorker = new ServerWorker(clientSocket);
+        Server server = new Server(port, workerList);
 
-                serverWorker.start();
+        server.run();
+    }
 
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    public ArrayList<ServerWorker> getWorkerListMain() {
+        return workerList;
+    }
+
+    public static void setWorkerListMain(ArrayList<ServerWorker> workerList) {
+        ServerMain.workerList = workerList;
     }
 }
 

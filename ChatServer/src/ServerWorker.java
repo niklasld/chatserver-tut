@@ -1,13 +1,17 @@
-import com.sun.deploy.util.StringUtils;
-
 import java.io.*;
 import java.net.Socket;
-import java.util.Date;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ServerWorker extends Thread {
-    private static Socket clientSocket;
+    private final Socket clientSocket;
+    private Server server;
+    private String login = null;
+    private OutputStream outputStream;
+    private static ArrayList<ServerWorker> workerList;
 
-    public ServerWorker(Socket clientSocket) {
+    public ServerWorker(Server server, Socket clientSocket) {
+        this.server = server;
         this.clientSocket = clientSocket;
     }
 
@@ -25,8 +29,8 @@ public class ServerWorker extends Thread {
     }
 
     private void handleClient() throws IOException, InterruptedException {
-        OutputStream outputStream = clientSocket.getOutputStream();
         InputStream inputStream = clientSocket.getInputStream();
+        this.outputStream = clientSocket.getOutputStream();
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
 
         String line;
@@ -51,6 +55,53 @@ public class ServerWorker extends Thread {
         clientSocket.close();
     }
 
-    private void handleLogin(OutputStream outputStream, String[] tokens) {
+    public String getLogin() {
+        return login;
+    }
+    public void setLogin(String login) {
+        this.login = login;
+    }
+
+    private void handleLogin(OutputStream outputStream, String[] tokens) throws IOException {
+        if(tokens.length==3) {
+            String login = tokens[1];
+            String password = tokens[2];
+
+            if(login.equals("guest") && password.equals("guest") || login.equals("niklas") && password.equals("niklas")) {
+                String msg = "ok login";
+
+                outputStream.write(msg.getBytes());
+
+                setLogin(login);
+
+                System.out.println("User logged in succesfully: "+getLogin());
+                workerList = server.getWorkerList();
+
+                //send current user have come online
+                for(ServerWorker worker: workerList) {
+                    String nowOnline = "\r\n"+getLogin()+" has come online \r\n";
+                    worker.send(nowOnline);
+                }
+                workerList.clear();
+                workerList = server.getWorkerList();
+                //All online users sent
+                String currentlyOnline = "\r\nCurrently online:\r\n";
+                for (ServerWorker worker: workerList) {
+
+                    currentlyOnline += ""+worker.getLogin()+"\r\n";
+                    worker.send(currentlyOnline);
+                    System.out.println(worker.getLogin());
+                }
+
+            }
+            else {
+                String msg = "Error login";
+                outputStream.write(msg.getBytes());
+            }
+        }
+    }
+
+    private void send(String msg) throws IOException {
+        outputStream.write(msg.getBytes());
     }
 }
